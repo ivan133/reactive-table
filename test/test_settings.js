@@ -136,6 +136,36 @@ Tinytest.add('Settings - showNavigationRowsPerPage', function (test) {
   );
 });
 
+
+Tinytest.add('Settings - showRowCount', function (test) {
+  testTable(
+    {
+      collection: rows,
+      settings: {
+        showNavigation: 'always',
+        showNavigationRowsPerPage: true,
+      }
+    },
+    function () {
+      test.length($('.reactive-table-navigation .rows-per-page .rows-per-page-count'), 0, "row count should be hidden");
+    }
+  );
+
+  testTable(
+    {
+      collection: rows,
+      settings: {
+        showNavigation: 'always',
+        showNavigationRowsPerPage: true,
+        showRowCount: true
+      }
+    },
+    function () {
+      test.length($('.reactive-table-navigation .rows-per-page .rows-per-page-count'), 1, "row count should be visible");
+    }
+  );
+});
+
 Tinytest.add('Settings - useFontAwesome', function (test) {
   testTable(
     {collection: rows},
@@ -167,7 +197,7 @@ Tinytest.add('Settings - useFontAwesome', function (test) {
 
   // simulate fontawesome installation
   Package['fortawesome:fontawesome'] = true;
-  
+
   testTable(
     {collection: rows},
     function () {
@@ -261,3 +291,228 @@ Tinytest.add('Settings - id', function (test) {
     }
   );
 });
+
+testAsyncMulti('Settings - noDataTmpl', [function (test, expect) {
+  var collection = new Mongo.Collection();
+  var id;
+
+  var table = Blaze.renderWithData(
+    Template.reactiveTable,
+    {collection: collection, noDataTmpl: Template.noData, fields: ['name', 'score']},
+    document.body
+  );
+
+  var expectNoData = expect(function () {
+    test.length($('.no-data'), 1, "no data template should be rendered");
+    test.length($('.reactive-table'), 0, "table should not be rendered");
+
+    Blaze.remove(table);
+  });
+
+  var expectFilteredToNoData = expect(function () {
+    test.length($('.no-data'), 1, "no data template should be rendered");
+    test.length($('.reactive-table'), 0, "table should not be rendered");
+
+    collection.remove(id);
+    Meteor.setTimeout(expectNoData, 0);
+  })
+
+  var expectTable = expect(function () {
+    test.length($('.no-data'), 0, "no data template should not be rendered");
+    test.length($('.reactive-table tbody tr'), 1, "second page should have one rows");
+
+    $('.reactive-table-filter input').val('g');
+    $('.reactive-table-filter input').trigger('input');
+    Meteor.setTimeout(expectFilteredToNoData, 1000);
+  });
+
+  test.length($('.no-data'), 1, "no data template should be rendered");
+  test.length($('.reactive-table'), 0, "table should not be rendered");
+
+  id = collection.insert({name: 'Ada Lovelace', score: 5});
+  Meteor.setTimeout(expectTable, 0);
+}]);
+
+testAsyncMulti('Settings - currentPage var updates table', [function (test, expect) {
+  var page = new ReactiveVar(0);
+
+  var table = Blaze.renderWithData(
+    Template.reactiveTable,
+    {collection: rows, settings: {rowsPerPage: 2, currentPage: page}},
+    document.body
+  );
+
+  var expectFirstPage = expect(function () {
+    test.equal($('.reactive-table tbody tr:first-child td:first-child').text(), "Ada Lovelace", "should be on first page");
+    test.length($('.reactive-table tbody tr'), 2, "first page should have two rows");
+    test.equal($('.reactive-table-navigation .page-number input').val(), "1", "displayed page number should be 1");
+
+    Blaze.remove(table);
+  });
+
+  var expectSecondPage = expect(function () {
+    test.equal($('.reactive-table tbody tr:first-child td:first-child').text(), "Claude Shannon", "should be on the second page");
+    test.length($('.reactive-table tbody tr'), 2, "second page should have two rows");
+    test.equal($('.reactive-table-navigation .page-number input').val(), "2", "displayed page number should be 2");
+
+    page.set(0);
+    Meteor.setTimeout(expectFirstPage, 0);
+  });
+
+  var expectLastPage = expect(function () {
+    test.equal($('.reactive-table tbody tr:first-child td:first-child').text(), "Marie Curie", "should be on last page");
+    test.length($('.reactive-table tbody tr'), 2, "last page should have two rows");
+    test.equal($('.reactive-table-navigation .page-number input').val(), "3", "displayed page number should be 3");
+
+    page.set(1);
+    Meteor.setTimeout(expectSecondPage, 0);
+  });
+
+  page.set(2);
+  Meteor.setTimeout(expectLastPage, 0);
+}]);
+
+testAsyncMulti('Settings - currentPage var updates table with server-side collection', [function (test, expect) {
+  var page = new ReactiveVar(0);
+
+  var table = Blaze.renderWithData(
+    Template.reactiveTable,
+    {collection: "collection", fields: ["name"], settings: {rowsPerPage: 2, currentPage: page}},
+    document.body
+  );
+
+  var expectFirstPage = expect(function () {
+    test.equal($('.reactive-table tbody tr:first-child td:first-child').text(), "Ada Lovelace", "should be on first page");
+    test.length($('.reactive-table tbody tr'), 2, "first page should have two rows");
+    test.equal($('.reactive-table-navigation .page-number input').val(), "1", "displayed page number should be 1");
+
+    Blaze.remove(table);
+  });
+
+  var expectSecondPage = expect(function () {
+    test.equal($('.reactive-table tbody tr:first-child td:first-child').text(), "Claude Shannon", "should be on the second page");
+    test.length($('.reactive-table tbody tr'), 2, "second page should have two rows");
+    test.equal($('.reactive-table-navigation .page-number input').val(), "2", "displayed page number should be 2");
+
+    page.set(0);
+    Meteor.setTimeout(expectFirstPage, 500);
+  });
+
+  var expectLastPage = expect(function () {
+    test.equal($('.reactive-table tbody tr:first-child td:first-child').text(), "Marie Curie", "should be on last page");
+    test.length($('.reactive-table tbody tr'), 2, "last page should have two rows");
+    test.equal($('.reactive-table-navigation .page-number input').val(), "3", "displayed page number should be 3");
+
+    page.set(1);
+    Meteor.setTimeout(expectSecondPage, 500);
+  });
+
+  page.set(2);
+  Meteor.setTimeout(expectLastPage, 500);
+}]);
+
+testAsyncMulti('Settings - currentPage var updated from table changes', [function (test, expect) {
+  var page = new ReactiveVar(0);
+
+  var table = Blaze.renderWithData(
+    Template.reactiveTable,
+    {collection: rows, settings: {rowsPerPage: 2, currentPage: page}},
+    document.body
+  );
+
+  var expectFirstPage = expect(function () {
+    test.equal(page.get(), 0, "should be on first page");
+
+    Blaze.remove(table);
+  });
+
+  var expectSecondPage = expect(function () {
+    test.equal(page.get(), 1, "should be on second page");
+
+    $('.reactive-table-navigation .page-number input').val("1");
+    $('.reactive-table-navigation .page-number input').trigger("change");
+    Meteor.setTimeout(expectFirstPage, 0);
+  });
+
+  var expectLastPage = expect(function () {
+    test.equal(page.get(), 2, "should be on last page");
+
+    $('.reactive-table-navigation .page-number input').val('2');
+    $('.reactive-table-navigation .page-number input').trigger("change");
+    Meteor.setTimeout(expectSecondPage, 0);
+  });
+
+  $('.reactive-table-navigation .page-number input').val("3");
+  $('.reactive-table-navigation .page-number input').trigger("change");
+  Meteor.setTimeout(expectLastPage, 0);
+}]);
+
+testAsyncMulti('Settings - rowsPerPage var updates table', [function (test, expect) {
+  var rowsPerPage = new ReactiveVar(5);
+
+  var table = Blaze.renderWithData(
+    Template.reactiveTable,
+    {collection: rows, settings: {rowsPerPage: rowsPerPage}},
+    document.body
+  );
+
+  var expectThreeRows = expect(function () {
+    test.length($('.reactive-table tbody tr'), 3, "three rows should be rendered");
+
+    Blaze.remove(table);
+  });
+
+  var expectFiveRows = expect(function () {
+    test.length($('.reactive-table tbody tr'), 5, "five rows should be rendered");
+
+    rowsPerPage.set(3);
+    Meteor.setTimeout(expectThreeRows, 0);
+  });
+
+  Meteor.setTimeout(expectFiveRows, 0);
+}]);
+
+testAsyncMulti('Settings - rowsPerPage var updates table with server-side collection', [function (test, expect) {
+  var rowsPerPage = new ReactiveVar(5);
+
+  var table = Blaze.renderWithData(
+    Template.reactiveTable,
+    {collection: "collection", fields: ["name"], settings: {rowsPerPage: rowsPerPage}},
+    document.body
+  );
+
+  var expectThreeRows = expect(function () {
+    test.length($('.reactive-table tbody tr'), 3, "three rows should be rendered");
+
+    Blaze.remove(table);
+  });
+
+  var expectFiveRows = expect(function () {
+    test.length($('.reactive-table tbody tr'), 5, "five rows should be rendered");
+
+    rowsPerPage.set(3);
+    Meteor.setTimeout(expectThreeRows, 500);
+  });
+
+  Meteor.setTimeout(expectFiveRows, 500);
+}]);
+
+testAsyncMulti('Settings - rowsPerPage var updated from table changes', [function (test, expect) {
+  var rowsPerPage = new ReactiveVar(5);
+
+  var table = Blaze.renderWithData(
+    Template.reactiveTable,
+    {collection: rows, settings: {rowsPerPage: rowsPerPage}},
+    document.body
+  );
+
+  var expectThreeRows = expect(function () {
+    test.equal(rowsPerPage.get(), 3, "three rows should be rendered");
+
+    Blaze.remove(table);
+  });
+
+  $('.reactive-table-navigation .rows-per-page input').val(3);
+  $('.reactive-table-navigation .rows-per-page input').trigger('change');
+  Meteor.setTimeout(expectThreeRows, 0);
+}]);

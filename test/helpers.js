@@ -17,7 +17,31 @@ rows = [
   {name: 'Claude Shannon', score: 5}
 ];
 
-collection = new Meteor.Collection();
-_.each(rows, function (row) {
-  collection.insert(row);
-});
+if (Meteor.isClient) {
+  collection = new Mongo.Collection();
+  _.each(rows, function (row) {
+    collection.insert(row);
+  });
+}
+
+if (Meteor.isServer) {
+  collection = new Mongo.Collection('players');
+  collection.remove({});
+  _.each(rows, function (row) {
+    collection.insert(row);
+  });
+
+  ReactiveTable.publish('collection', collection);
+
+  ReactiveTable.publish('collection-and-selector', collection, {score: 5});
+
+  ReactiveTable.publish('collection-function', function () {
+    return collection;
+  });
+
+  ReactiveTable.publish('selector-function', collection, function () {
+    return {score: 5};
+  });
+
+  ReactiveTable.publish('collection-or-filter', collection, {}, {filterOperator: "$or"});
+}
