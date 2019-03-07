@@ -2,36 +2,38 @@
   {{#with context}}
   {{#if ready}}
     <div class="clearfix">
-      <div class="reactive-table-options col-sm-8 pull-right">
-        {{#if showFilter}}
-          <div class="reactive-table-filter form-group col-sm-8 pull-right">
-            {{> reactiveTableFilter id=getFilterId useFontAwesome=useFontAwesome}}
+    {{#if or showColumnToggles showFilter}}
+          <div class="reactive-table-options col-sm-8 pull-right">
+            {{#if showFilter}}
+              <div class="reactive-table-filter form-group col-sm-8 pull-right">
+                {{> reactiveTableFilter id=getFilterId useFontAwesome=useFontAwesome}}
+              </div>
+            {{/if}}
+            {{#if showColumnToggles}}
+              <div class="reactive-table-columns-dropdown col-sm-4 pull-right">
+                <button class="btn btn-default dropdown-toggle" id="reactive-table-add-column-{{id}}" data-toggle="dropdown">
+                  {{i18n 'reactiveTable.columns'}}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-right" role="menu" aria-labelledby="reactive-table-add-column-{{id}}">
+                  {{#each fields}}
+                    {{#unless hideToggle}}
+                      <li role="presentation"><a role="menuitem" tabindex="-1" data-target="#">
+                        {{#if isVisible}}
+                          <input type="checkbox" checked data-fieldid="{{fieldId}}">
+                        {{else}}
+                          <input type="checkbox" data-fieldid="{{fieldId}}">
+                        {{/if}}
+                        <label>
+                          {{#if labelIsTemplate}}{{#with labelData}}{{> ../label}}{{else}}{{> label}}{{/with}}{{else}}{{getLabel}}{{/if}}
+                        </label>
+                      </a></li>
+                    {{/unless}}
+                  {{/each}}
+                </ul>
+              </div>
+            {{/if}}
           </div>
-        {{/if}}
-        {{#if showColumnToggles}}
-          <div class="reactive-table-columns-dropdown col-sm-4 pull-right">
-            <button class="btn btn-default dropdown-toggle" id="reactive-table-add-column-{{id}}" data-toggle="dropdown">
-              {{i18n 'reactiveTable.columns'}}
-            </button>
-            <ul class="dropdown-menu dropdown-menu-right" role="menu" aria-labelledby="reactive-table-add-column-{{id}}">
-              {{#each fields}}
-                {{#unless hideToggle}}
-                  <li role="presentation"><a role="menuitem" tabindex="-1" data-target="#">
-                    {{#if isVisible}}
-                      <input type="checkbox" checked data-fieldid="{{fieldId}}">
-                    {{else}}
-                      <input type="checkbox" data-fieldid="{{fieldId}}">
-                    {{/if}}
-                    <label>
-                      {{#if labelIsTemplate}}{{#with labelData}}{{> ../label}}{{else}}{{> label}}{{/with}}{{else}}{{getLabel}}{{/if}}
-                    </label>
-                  </a></li>
-                {{/unless}}
-              {{/each}}
-            </ul>
-          </div>
-        {{/if}}
-      </div>
+    {{/if}}
     </div>
     {{#unless noData}}
       <table id="{{id}}" class="{{class}} reactive-table">
